@@ -97,15 +97,16 @@ impl Config {
     /// Construct the firmware configuration from compile-time environment
     /// variables.  Panics at compile time if required variables are missing.
     pub fn load() -> Self {
-        let tls = if MQTT_CA_CERT.is_some() || MQTT_CLIENT_CERT.is_some() || MQTT_CLIENT_KEY.is_some() {
-            Some(TlsConfig {
-                ca_cert: MQTT_CA_CERT,
-                client_cert: MQTT_CLIENT_CERT,
-                client_key: MQTT_CLIENT_KEY,
-            })
-        } else {
-            None
-        };
+        let tls =
+            if MQTT_CA_CERT.is_some() || MQTT_CLIENT_CERT.is_some() || MQTT_CLIENT_KEY.is_some() {
+                Some(TlsConfig {
+                    ca_cert: MQTT_CA_CERT,
+                    client_cert: MQTT_CLIENT_CERT,
+                    client_key: MQTT_CLIENT_KEY,
+                })
+            } else {
+                None
+            };
 
         Config {
             wifi: WifiConfig {
@@ -149,7 +150,10 @@ const fn parse_u32(s: &str) -> u32 {
     let mut i = 0;
     while i < bytes.len() {
         let b = bytes[i];
-        assert!(b >= b'0' && b <= b'9', "HYDROLEVEL_* numeric var must be a non-negative integer");
+        assert!(
+            b >= b'0' && b <= b'9',
+            "HYDROLEVEL_* numeric var must be a non-negative integer"
+        );
         result = result * 10 + (b - b'0') as u32;
         i += 1;
     }
@@ -162,7 +166,10 @@ const fn parse_u64(s: &str) -> u64 {
     let mut i = 0;
     while i < bytes.len() {
         let b = bytes[i];
-        assert!(b >= b'0' && b <= b'9', "HYDROLEVEL_* numeric var must be a non-negative integer");
+        assert!(
+            b >= b'0' && b <= b'9',
+            "HYDROLEVEL_* numeric var must be a non-negative integer"
+        );
         result = result * 10 + (b - b'0') as u64;
         i += 1;
     }
