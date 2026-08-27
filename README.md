@@ -76,6 +76,7 @@ firmware binary.  The `.env` file is ignored by git.
 | `HYDROLEVEL_SENSOR_DEBOUNCE_MS` | Debounce window in milliseconds |
 | `HYDROLEVEL_PUBLISH_INTERVAL_MS` | Heartbeat interval (0 = off) |
 | `HYDROLEVEL_OTA_URL` | Optional HTTP(S) URL for startup OTA firmware update |
+| `HYDROLEVEL_OTA_AUTO_APPLY` | `true` enables startup OTA apply from `HYDROLEVEL_OTA_URL` |
 
 ### MQTT broker URI schemes
 
@@ -120,8 +121,9 @@ This project now includes:
 - Optional startup OTA flow controlled by `HYDROLEVEL_OTA_URL`
 - GitHub Actions release image generation (`hydrolevel-<tag>-ota.bin`)
 
-When `HYDROLEVEL_OTA_URL` is set, firmware will fetch the image at startup,
-write it to the next OTA slot, and reboot into the new slot.
+When `HYDROLEVEL_OTA_AUTO_APPLY=true` and `HYDROLEVEL_OTA_URL` is set,
+firmware will fetch the image at startup, write it to the next OTA slot, and
+reboot into the new slot.
 
 ## GitHub Actions
 

@@ -64,6 +64,7 @@ jobs:
           HYDROLEVEL_PUBLISH_INTERVAL_MS: ${{ secrets.HYDROLEVEL_PUBLISH_INTERVAL_MS }}
           HYDROLEVEL_LOG_LEVEL: ${{ secrets.HYDROLEVEL_LOG_LEVEL }}
           HYDROLEVEL_OTA_URL: ${{ secrets.HYDROLEVEL_OTA_URL }}
+          HYDROLEVEL_OTA_AUTO_APPLY: ${{ secrets.HYDROLEVEL_OTA_AUTO_APPLY }}
         run: |
           {
             echo "HYDROLEVEL_WIFI_SSID=${HYDROLEVEL_WIFI_SSID:-ci-ssid}"
@@ -86,6 +87,7 @@ jobs:
             echo "HYDROLEVEL_PUBLISH_INTERVAL_MS=${HYDROLEVEL_PUBLISH_INTERVAL_MS:-30000}"
             echo "HYDROLEVEL_LOG_LEVEL=${HYDROLEVEL_LOG_LEVEL:-INFO}"
             echo "HYDROLEVEL_OTA_URL=${HYDROLEVEL_OTA_URL:-}"
+            echo "HYDROLEVEL_OTA_AUTO_APPLY=${HYDROLEVEL_OTA_AUTO_APPLY:-false}"
           } > .env
 
       - name: Check formatting
@@ -146,6 +148,7 @@ jobs:
           HYDROLEVEL_PUBLISH_INTERVAL_MS: ${{ secrets.HYDROLEVEL_PUBLISH_INTERVAL_MS }}
           HYDROLEVEL_LOG_LEVEL: ${{ secrets.HYDROLEVEL_LOG_LEVEL }}
           HYDROLEVEL_OTA_URL: ${{ secrets.HYDROLEVEL_OTA_URL }}
+          HYDROLEVEL_OTA_AUTO_APPLY: ${{ secrets.HYDROLEVEL_OTA_AUTO_APPLY }}
         run: |
           required=(
             HYDROLEVEL_WIFI_SSID
@@ -190,6 +193,7 @@ jobs:
             echo "HYDROLEVEL_PUBLISH_INTERVAL_MS=${HYDROLEVEL_PUBLISH_INTERVAL_MS}"
             echo "HYDROLEVEL_LOG_LEVEL=${HYDROLEVEL_LOG_LEVEL:-INFO}"
             echo "HYDROLEVEL_OTA_URL=${HYDROLEVEL_OTA_URL:-}"
+            echo "HYDROLEVEL_OTA_AUTO_APPLY=${HYDROLEVEL_OTA_AUTO_APPLY:-false}"
           } > .env
 
       - name: Build firmware

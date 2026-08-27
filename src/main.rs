@@ -60,10 +60,16 @@ fn main() -> Result<()> {
     // Wi-Fi interface active.
     let _wifi = wifi::connect(peripherals.modem, sysloop, nvs, &cfg.wifi)?;
 
-    if let Some(url) = cfg.ota.firmware_url {
-        if let Err(e) = ota::try_update_and_reboot(url) {
-            warn!("OTA update failed, continuing with current firmware: {e}");
+    if cfg.ota.auto_apply_on_boot {
+        if let Some(url) = cfg.ota.firmware_url {
+            if let Err(e) = ota::try_update_and_reboot(url) {
+                warn!("OTA update failed, continuing with current firmware: {e}");
+            }
+        } else {
+            warn!("HYDROLEVEL_OTA_AUTO_APPLY is true but HYDROLEVEL_OTA_URL is empty");
         }
+    } else if cfg.ota.firmware_url.is_some() {
+        info!("HYDROLEVEL_OTA_URL is configured but auto-apply is disabled");
     }
 
     // ── MQTT ──────────────────────────────────────────────────────────────────

@@ -91,6 +91,8 @@ pub struct HaConfig {
 pub struct OtaConfig {
     /// Optional URL to an OTA app binary.
     pub firmware_url: Option<&'static str>,
+    /// Enables automatic OTA apply on boot when a URL is configured.
+    pub auto_apply_on_boot: bool,
 }
 
 impl Config {
@@ -137,6 +139,9 @@ impl Config {
             },
             ota: OtaConfig {
                 firmware_url: option_env!("HYDROLEVEL_OTA_URL").and_then(non_empty),
+                auto_apply_on_boot: option_env!("HYDROLEVEL_OTA_AUTO_APPLY")
+                    .map(parse_bool)
+                    .unwrap_or(false),
             },
         }
     }
