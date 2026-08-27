@@ -1,0 +1,42 @@
+# sdkconfig.defaults – ESP-IDF Kconfig options for hydrolevel
+#
+# These settings are merged with the platform defaults by esp-idf-svc/embuild.
+# Override individual options in sdkconfig.defaults.esp32c3 if needed.
+
+# ── Target ───────────────────────────────────────────────────────────────────
+CONFIG_IDF_TARGET="esp32c3"
+
+# ── System / RTOS ─────────────────────────────────────────────────────────────
+CONFIG_FREERTOS_HZ=1000
+CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE=4096
+
+# ── Wi-Fi ─────────────────────────────────────────────────────────────────────
+CONFIG_ESP_WIFI_STATIC_RX_BUFFER_NUM=4
+CONFIG_ESP_WIFI_DYNAMIC_RX_BUFFER_NUM=16
+CONFIG_ESP_WIFI_TX_BUFFER_TYPE_DYNAMIC=y
+
+# ── MQTT (esp-mqtt component) ─────────────────────────────────────────────────
+CONFIG_MQTT_PROTOCOL_311=y
+# Enable MQTT 5.0 support (alongside 3.1.1).  The actual protocol version is
+# selected by the broker URI scheme (mqtt5:// or mqtt5s://).
+CONFIG_MQTT_PROTOCOL_5=y
+CONFIG_MQTT_BUFFER_SIZE=1024
+CONFIG_MQTT_TASK_STACK_SIZE=6144
+CONFIG_MQTT_RECONNECT_TIMEOUT_MS=10000
+
+# ── TLS (mbedTLS) ─────────────────────────────────────────────────────────────
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_FULL=y
+# Enable ECC support for certificate-based auth.
+CONFIG_MBEDTLS_ECP_C=y
+CONFIG_MBEDTLS_ECDH_C=y
+CONFIG_MBEDTLS_ECDSA_C=y
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_LOG_MAXIMUM_LEVEL_VERBOSE=y
+
+# ── Flash / partition ─────────────────────────────────────────────────────────
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
