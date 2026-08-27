@@ -11,6 +11,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_TARGET: riscv32imc-esp-espidf
+  ESP_CHIP: esp32c3
 
 permissions:
   contents: read
@@ -201,7 +202,7 @@ jobs:
       - name: Generate OTA app image
         run: |
           IMAGE_NAME=hydrolevel-${GITHUB_REF_NAME}-ota.bin
-          espflash save-image --chip esp32c3 target/${RUST_TARGET}/release/hydrolevel ${IMAGE_NAME}
+          espflash save-image --chip ${ESP_CHIP} target/${RUST_TARGET}/release/hydrolevel ${IMAGE_NAME}
           sha256sum ${IMAGE_NAME} > ${IMAGE_NAME}.sha256
 
       - name: Upload release artifacts
