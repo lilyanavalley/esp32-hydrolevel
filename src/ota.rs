@@ -39,7 +39,7 @@ pub fn try_update_and_reboot(url: &str) -> Result<()> {
     }
 
     if total == 0 {
-        update.abort()?;
+        let _ = update.abort();
         bail!("OTA payload was empty");
     }
 

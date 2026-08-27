@@ -99,6 +99,10 @@ jobs:
       - name: Compile tests
         run: cargo test --target $RUST_TARGET --no-run
 
+      - name: Remove temporary build-time .env
+        if: always()
+        run: rm -f .env
+
   release-image:
     name: Build Release Image
     runs-on: ubuntu-latest
@@ -114,11 +118,6 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: riscv32imc-esp-espidf
-
-      - name: Restore Rust dependency cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: esp32-hydrolevel-release
 
       - name: Install build prerequisites
         run: |
@@ -222,3 +221,7 @@ jobs:
             target/${{ env.RUST_TARGET }}/release/hydrolevel
             hydrolevel-${{ github.ref_name }}-ota.bin
             hydrolevel-${{ github.ref_name }}-ota.bin.sha256
+
+      - name: Remove temporary build-time .env
+        if: always()
+        run: rm -f .env
