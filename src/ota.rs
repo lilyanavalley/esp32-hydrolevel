@@ -38,6 +38,11 @@ pub fn try_update_and_reboot(url: &str) -> Result<()> {
         total += read;
     }
 
+    if total == 0 {
+        update.abort()?;
+        bail!("OTA payload was empty");
+    }
+
     update.complete()?;
     info!("OTA update written successfully ({total} bytes), rebooting.");
     restart();

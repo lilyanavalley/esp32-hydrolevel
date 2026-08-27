@@ -212,7 +212,7 @@ jobs:
             hydrolevel-${{ github.ref_name }}-ota.bin.sha256
 
       - name: Attach firmware to GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@da356a369686f885e31afc94fd4d8dc91c7a64a
         with:
           files: |
             target/${{ env.RUST_TARGET }}/release/hydrolevel
