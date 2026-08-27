@@ -41,4 +41,5 @@ pub fn try_update_and_reboot(url: &str) -> Result<()> {
     update.complete()?;
     info!("OTA update written successfully ({total} bytes), rebooting.");
     restart();
+    bail!("Device restart returned unexpectedly after OTA completion")
 }
