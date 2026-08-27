@@ -97,7 +97,7 @@ jobs:
         run: cargo build --release --target $RUST_TARGET
 
       - name: Compile tests
-        run: cargo test --target $RUST_TARGET --no-run
+        run: cargo build --tests --target $RUST_TARGET
 
       - name: Remove temporary build-time .env
         if: always()
@@ -215,6 +215,7 @@ jobs:
             hydrolevel-${{ github.ref_name }}-ota.bin.sha256
 
       - name: Attach firmware to GitHub release
+        # Pinned softprops/action-gh-release v2 commit SHA.
         uses: softprops/action-gh-release@da356a369686f885e31afc94fd4d8dc91c7a64a
         with:
           files: |
