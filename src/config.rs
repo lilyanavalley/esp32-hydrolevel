@@ -20,6 +20,7 @@ pub struct Config {
     pub sensor: SensorConfig,
     pub publish: PublishConfig,
     pub ha: HaConfig,
+    pub ota: OtaConfig,
 }
 
 pub struct WifiConfig {
@@ -86,6 +87,12 @@ pub struct HaConfig {
     pub availability_topic: &'static str,
 }
 
+/// OTA update behavior.
+pub struct OtaConfig {
+    /// Optional URL to an OTA app binary.
+    pub firmware_url: Option<&'static str>,
+}
+
 impl Config {
     /// Construct the firmware configuration from compile-time environment
     /// variables.  Panics at compile time if required variables are missing.
@@ -126,6 +133,9 @@ impl Config {
                 device_name: env!("HYDROLEVEL_HA_DEVICE_NAME"),
                 state_topic: env!("HYDROLEVEL_MQTT_STATE_TOPIC"),
                 availability_topic: env!("HYDROLEVEL_MQTT_AVAILABILITY_TOPIC"),
+            },
+            ota: OtaConfig {
+                firmware_url: option_env!("HYDROLEVEL_OTA_URL").and_then(non_empty),
             },
         }
     }
@@ -171,4 +181,12 @@ const fn parse_bool(s: &str) -> bool {
             ),
             (Some(b't'), Some(b'r'), Some(b'u'), Some(b'e'))
         )
+}
+
+fn non_empty(value: &'static str) -> Option<&'static str> {
+    if value.is_empty() {
+        None
+    } else {
+        Some(value)
+    }
 }

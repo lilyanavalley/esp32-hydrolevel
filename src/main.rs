@@ -9,6 +9,7 @@
 
 mod config;
 mod mqtt;
+mod ota;
 mod sensor;
 mod wifi;
 
@@ -63,6 +64,12 @@ fn main() -> Result<()> {
         nvs,
         &cfg.wifi,
     )?;
+
+    if let Some(url) = cfg.ota.firmware_url {
+        if let Err(e) = ota::try_update_and_reboot(url) {
+            warn!("OTA update failed, continuing with current firmware: {e}");
+        }
+    }
 
     // ── MQTT ──────────────────────────────────────────────────────────────────
     let mut mqtt = MqttManager::connect(&cfg)?;
