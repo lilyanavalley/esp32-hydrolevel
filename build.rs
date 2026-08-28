@@ -71,9 +71,10 @@ fn read_cert_env(env_key: &str) -> Option<Vec<u8>> {
     }
 
     println!("cargo:rerun-if-changed={}", path.display());
-    Some(fs::read(&path).unwrap_or_else(|e| {
-        panic!("Failed to read certificate '{}': {e}", path.display())
-    }))
+    Some(
+        fs::read(&path)
+            .unwrap_or_else(|e| panic!("Failed to read certificate '{}': {e}", path.display())),
+    )
 }
 
 /// Render a Vec<u8> as a Rust `Some(&[...])` or `None` literal.

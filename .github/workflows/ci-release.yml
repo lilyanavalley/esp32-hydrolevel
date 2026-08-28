@@ -1,0 +1,231 @@
+name: Release Firmware
+
+on:
+  pull_request:
+  push:
+    tags:
+      - "v*"
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_TARGET: riscv32imc-esp-espidf
+  ESP_CHIP: esp32c3
+
+permissions:
+  contents: read
+
+jobs:
+  rust-test:
+    uses: ./.github/workflows/test-rust.yml
+
+  rust-ci:
+    name: Rust CI
+    runs-on: ubuntu-latest
+    # if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: cargo-bins/cargo-binstall@main
+        
+      - name: Install espup and esp32 toolchain
+        run: |
+          cargo binstall espup
+          espup install 
+
+      - name: Restore Rust dependency cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: esp32-hydrolevel-ci
+
+      - name: Install build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libssl-dev
+          cargo install --locked ldproxy
+
+      - name: Generate build-time .env from repository secrets
+        env:
+          HYDROLEVEL_WIFI_SSID: ${{ secrets.HYDROLEVEL_WIFI_SSID }}
+          HYDROLEVEL_WIFI_PASSWORD: ${{ secrets.HYDROLEVEL_WIFI_PASSWORD }}
+          HYDROLEVEL_MQTT_BROKER_URI: ${{ secrets.HYDROLEVEL_MQTT_BROKER_URI }}
+          HYDROLEVEL_MQTT_USERNAME: ${{ secrets.HYDROLEVEL_MQTT_USERNAME }}
+          HYDROLEVEL_MQTT_PASSWORD: ${{ secrets.HYDROLEVEL_MQTT_PASSWORD }}
+          HYDROLEVEL_MQTT_CLIENT_ID: ${{ secrets.HYDROLEVEL_MQTT_CLIENT_ID }}
+          HYDROLEVEL_MQTT_CA_CERT_PATH: ${{ secrets.HYDROLEVEL_MQTT_CA_CERT_PATH }}
+          HYDROLEVEL_MQTT_CLIENT_CERT_PATH: ${{ secrets.HYDROLEVEL_MQTT_CLIENT_CERT_PATH }}
+          HYDROLEVEL_MQTT_CLIENT_KEY_PATH: ${{ secrets.HYDROLEVEL_MQTT_CLIENT_KEY_PATH }}
+          HYDROLEVEL_HA_DISCOVERY_PREFIX: ${{ secrets.HYDROLEVEL_HA_DISCOVERY_PREFIX }}
+          HYDROLEVEL_HA_DEVICE_ID: ${{ secrets.HYDROLEVEL_HA_DEVICE_ID }}
+          HYDROLEVEL_HA_DEVICE_NAME: ${{ secrets.HYDROLEVEL_HA_DEVICE_NAME }}
+          HYDROLEVEL_MQTT_STATE_TOPIC: ${{ secrets.HYDROLEVEL_MQTT_STATE_TOPIC }}
+          HYDROLEVEL_MQTT_AVAILABILITY_TOPIC: ${{ secrets.HYDROLEVEL_MQTT_AVAILABILITY_TOPIC }}
+          HYDROLEVEL_SENSOR_GPIO: ${{ secrets.HYDROLEVEL_SENSOR_GPIO }}
+          HYDROLEVEL_SENSOR_ACTIVE_HIGH: ${{ secrets.HYDROLEVEL_SENSOR_ACTIVE_HIGH }}
+          HYDROLEVEL_SENSOR_DEBOUNCE_MS: ${{ secrets.HYDROLEVEL_SENSOR_DEBOUNCE_MS }}
+          HYDROLEVEL_PUBLISH_INTERVAL_MS: ${{ secrets.HYDROLEVEL_PUBLISH_INTERVAL_MS }}
+          HYDROLEVEL_LOG_LEVEL: ${{ secrets.HYDROLEVEL_LOG_LEVEL }}
+          HYDROLEVEL_OTA_URL: ${{ secrets.HYDROLEVEL_OTA_URL }}
+          HYDROLEVEL_OTA_AUTO_APPLY: ${{ secrets.HYDROLEVEL_OTA_AUTO_APPLY }}
+        run: |
+          {
+            echo "HYDROLEVEL_WIFI_SSID=${HYDROLEVEL_WIFI_SSID:-ci-ssid}"
+            echo "HYDROLEVEL_WIFI_PASSWORD=${HYDROLEVEL_WIFI_PASSWORD:-ci-password}"
+            echo "HYDROLEVEL_MQTT_BROKER_URI=${HYDROLEVEL_MQTT_BROKER_URI:-mqtt://localhost:1883}"
+            echo "HYDROLEVEL_MQTT_USERNAME=${HYDROLEVEL_MQTT_USERNAME:-}"
+            echo "HYDROLEVEL_MQTT_PASSWORD=${HYDROLEVEL_MQTT_PASSWORD:-}"
+            echo "HYDROLEVEL_MQTT_CLIENT_ID=${HYDROLEVEL_MQTT_CLIENT_ID:-hydrolevel-ci}"
+            echo "HYDROLEVEL_MQTT_CA_CERT_PATH=${HYDROLEVEL_MQTT_CA_CERT_PATH:-}"
+            echo "HYDROLEVEL_MQTT_CLIENT_CERT_PATH=${HYDROLEVEL_MQTT_CLIENT_CERT_PATH:-}"
+            echo "HYDROLEVEL_MQTT_CLIENT_KEY_PATH=${HYDROLEVEL_MQTT_CLIENT_KEY_PATH:-}"
+            echo "HYDROLEVEL_HA_DISCOVERY_PREFIX=${HYDROLEVEL_HA_DISCOVERY_PREFIX:-homeassistant}"
+            echo "HYDROLEVEL_HA_DEVICE_ID=${HYDROLEVEL_HA_DEVICE_ID:-hydrolevel_ci}"
+            echo "HYDROLEVEL_HA_DEVICE_NAME=${HYDROLEVEL_HA_DEVICE_NAME:-Hydrolevel CI}"
+            echo "HYDROLEVEL_MQTT_STATE_TOPIC=${HYDROLEVEL_MQTT_STATE_TOPIC:-hydrolevel/hydrolevel_ci/state}"
+            echo "HYDROLEVEL_MQTT_AVAILABILITY_TOPIC=${HYDROLEVEL_MQTT_AVAILABILITY_TOPIC:-hydrolevel/hydrolevel_ci/availability}"
+            echo "HYDROLEVEL_SENSOR_GPIO=${HYDROLEVEL_SENSOR_GPIO:-4}"
+            echo "HYDROLEVEL_SENSOR_ACTIVE_HIGH=${HYDROLEVEL_SENSOR_ACTIVE_HIGH:-false}"
+            echo "HYDROLEVEL_SENSOR_DEBOUNCE_MS=${HYDROLEVEL_SENSOR_DEBOUNCE_MS:-200}"
+            echo "HYDROLEVEL_PUBLISH_INTERVAL_MS=${HYDROLEVEL_PUBLISH_INTERVAL_MS:-30000}"
+            echo "HYDROLEVEL_LOG_LEVEL=${HYDROLEVEL_LOG_LEVEL:-INFO}"
+            echo "HYDROLEVEL_OTA_URL=${HYDROLEVEL_OTA_URL:-}"
+            echo "HYDROLEVEL_OTA_AUTO_APPLY=${HYDROLEVEL_OTA_AUTO_APPLY:-false}"
+          } > .env
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Build firmware
+        run: cargo build --release --target $RUST_TARGET
+
+      - name: Compile tests
+        run: cargo build --tests --target $RUST_TARGET
+
+      - name: Remove temporary build-time .env
+        if: always()
+        run: rm -f .env
+
+  release-image:
+    name: Build Release Image
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: riscv32imc-esp-espidf
+
+      - name: Install build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libssl-dev
+          cargo install --locked ldproxy espflash
+
+      - name: Generate release .env from repository secrets
+        env:
+          HYDROLEVEL_WIFI_SSID: ${{ secrets.HYDROLEVEL_WIFI_SSID }}
+          HYDROLEVEL_WIFI_PASSWORD: ${{ secrets.HYDROLEVEL_WIFI_PASSWORD }}
+          HYDROLEVEL_MQTT_BROKER_URI: ${{ secrets.HYDROLEVEL_MQTT_BROKER_URI }}
+          HYDROLEVEL_MQTT_USERNAME: ${{ secrets.HYDROLEVEL_MQTT_USERNAME }}
+          HYDROLEVEL_MQTT_PASSWORD: ${{ secrets.HYDROLEVEL_MQTT_PASSWORD }}
+          HYDROLEVEL_MQTT_CLIENT_ID: ${{ secrets.HYDROLEVEL_MQTT_CLIENT_ID }}
+          HYDROLEVEL_MQTT_CA_CERT_PATH: ${{ secrets.HYDROLEVEL_MQTT_CA_CERT_PATH }}
+          HYDROLEVEL_MQTT_CLIENT_CERT_PATH: ${{ secrets.HYDROLEVEL_MQTT_CLIENT_CERT_PATH }}
+          HYDROLEVEL_MQTT_CLIENT_KEY_PATH: ${{ secrets.HYDROLEVEL_MQTT_CLIENT_KEY_PATH }}
+          HYDROLEVEL_HA_DISCOVERY_PREFIX: ${{ secrets.HYDROLEVEL_HA_DISCOVERY_PREFIX }}
+          HYDROLEVEL_HA_DEVICE_ID: ${{ secrets.HYDROLEVEL_HA_DEVICE_ID }}
+          HYDROLEVEL_HA_DEVICE_NAME: ${{ secrets.HYDROLEVEL_HA_DEVICE_NAME }}
+          HYDROLEVEL_MQTT_STATE_TOPIC: ${{ secrets.HYDROLEVEL_MQTT_STATE_TOPIC }}
+          HYDROLEVEL_MQTT_AVAILABILITY_TOPIC: ${{ secrets.HYDROLEVEL_MQTT_AVAILABILITY_TOPIC }}
+          HYDROLEVEL_SENSOR_GPIO: ${{ secrets.HYDROLEVEL_SENSOR_GPIO }}
+          HYDROLEVEL_SENSOR_ACTIVE_HIGH: ${{ secrets.HYDROLEVEL_SENSOR_ACTIVE_HIGH }}
+          HYDROLEVEL_SENSOR_DEBOUNCE_MS: ${{ secrets.HYDROLEVEL_SENSOR_DEBOUNCE_MS }}
+          HYDROLEVEL_PUBLISH_INTERVAL_MS: ${{ secrets.HYDROLEVEL_PUBLISH_INTERVAL_MS }}
+          HYDROLEVEL_LOG_LEVEL: ${{ secrets.HYDROLEVEL_LOG_LEVEL }}
+          HYDROLEVEL_OTA_URL: ${{ secrets.HYDROLEVEL_OTA_URL }}
+          HYDROLEVEL_OTA_AUTO_APPLY: ${{ secrets.HYDROLEVEL_OTA_AUTO_APPLY }}
+        run: |
+          required=(
+            HYDROLEVEL_WIFI_SSID
+            HYDROLEVEL_WIFI_PASSWORD
+            HYDROLEVEL_MQTT_BROKER_URI
+            HYDROLEVEL_MQTT_CLIENT_ID
+            HYDROLEVEL_HA_DISCOVERY_PREFIX
+            HYDROLEVEL_HA_DEVICE_ID
+            HYDROLEVEL_HA_DEVICE_NAME
+            HYDROLEVEL_MQTT_STATE_TOPIC
+            HYDROLEVEL_MQTT_AVAILABILITY_TOPIC
+            HYDROLEVEL_SENSOR_GPIO
+            HYDROLEVEL_SENSOR_ACTIVE_HIGH
+            HYDROLEVEL_SENSOR_DEBOUNCE_MS
+            HYDROLEVEL_PUBLISH_INTERVAL_MS
+          )
+          for key in "${required[@]}"; do
+            if [ -z "${!key:-}" ]; then
+              echo "Missing required secret: $key"
+              exit 1
+            fi
+          done
+
+          {
+            echo "HYDROLEVEL_WIFI_SSID=${HYDROLEVEL_WIFI_SSID}"
+            echo "HYDROLEVEL_WIFI_PASSWORD=${HYDROLEVEL_WIFI_PASSWORD}"
+            echo "HYDROLEVEL_MQTT_BROKER_URI=${HYDROLEVEL_MQTT_BROKER_URI}"
+            echo "HYDROLEVEL_MQTT_USERNAME=${HYDROLEVEL_MQTT_USERNAME:-}"
+            echo "HYDROLEVEL_MQTT_PASSWORD=${HYDROLEVEL_MQTT_PASSWORD:-}"
+            echo "HYDROLEVEL_MQTT_CLIENT_ID=${HYDROLEVEL_MQTT_CLIENT_ID}"
+            echo "HYDROLEVEL_MQTT_CA_CERT_PATH=${HYDROLEVEL_MQTT_CA_CERT_PATH:-}"
+            echo "HYDROLEVEL_MQTT_CLIENT_CERT_PATH=${HYDROLEVEL_MQTT_CLIENT_CERT_PATH:-}"
+            echo "HYDROLEVEL_MQTT_CLIENT_KEY_PATH=${HYDROLEVEL_MQTT_CLIENT_KEY_PATH:-}"
+            echo "HYDROLEVEL_HA_DISCOVERY_PREFIX=${HYDROLEVEL_HA_DISCOVERY_PREFIX}"
+            echo "HYDROLEVEL_HA_DEVICE_ID=${HYDROLEVEL_HA_DEVICE_ID}"
+            echo "HYDROLEVEL_HA_DEVICE_NAME=${HYDROLEVEL_HA_DEVICE_NAME}"
+            echo "HYDROLEVEL_MQTT_STATE_TOPIC=${HYDROLEVEL_MQTT_STATE_TOPIC}"
+            echo "HYDROLEVEL_MQTT_AVAILABILITY_TOPIC=${HYDROLEVEL_MQTT_AVAILABILITY_TOPIC}"
+            echo "HYDROLEVEL_SENSOR_GPIO=${HYDROLEVEL_SENSOR_GPIO}"
+            echo "HYDROLEVEL_SENSOR_ACTIVE_HIGH=${HYDROLEVEL_SENSOR_ACTIVE_HIGH}"
+            echo "HYDROLEVEL_SENSOR_DEBOUNCE_MS=${HYDROLEVEL_SENSOR_DEBOUNCE_MS}"
+            echo "HYDROLEVEL_PUBLISH_INTERVAL_MS=${HYDROLEVEL_PUBLISH_INTERVAL_MS}"
+            echo "HYDROLEVEL_LOG_LEVEL=${HYDROLEVEL_LOG_LEVEL:-INFO}"
+            echo "HYDROLEVEL_OTA_URL=${HYDROLEVEL_OTA_URL:-}"
+            echo "HYDROLEVEL_OTA_AUTO_APPLY=${HYDROLEVEL_OTA_AUTO_APPLY:-false}"
+          } > .env
+
+      - name: Build firmware
+        run: cargo build --release --target $RUST_TARGET
+
+      - name: Generate OTA app image
+        run: |
+          IMAGE_NAME=hydrolevel-${GITHUB_REF_NAME}-ota.bin
+          espflash save-image --chip ${ESP_CHIP} target/${RUST_TARGET}/release/hydrolevel ${IMAGE_NAME}
+          sha256sum ${IMAGE_NAME} > ${IMAGE_NAME}.sha256
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hydrolevel-${{ github.ref_name }}-firmware
+          if-no-files-found: error
+          path: |
+            target/${{ env.RUST_TARGET }}/release/hydrolevel
+            hydrolevel-${{ github.ref_name }}-ota.bin
+            hydrolevel-${{ github.ref_name }}-ota.bin.sha256
+
+      - name: Attach firmware to GitHub release
+        # Pinned softprops/action-gh-release v2 commit SHA.
+        uses: softprops/action-gh-release
+        with:
+          files: |
+            target/${{ env.RUST_TARGET }}/release/hydrolevel
+            hydrolevel-${{ github.ref_name }}-ota.bin
+            hydrolevel-${{ github.ref_name }}-ota.bin.sha256
+
+      - name: Remove temporary build-time .env
+        if: always()
+        run: rm -f .env

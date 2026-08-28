@@ -75,6 +75,8 @@ firmware binary.  The `.env` file is ignored by git.
 | `HYDROLEVEL_SENSOR_ACTIVE_HIGH` | `true` / `false` for signal polarity |
 | `HYDROLEVEL_SENSOR_DEBOUNCE_MS` | Debounce window in milliseconds |
 | `HYDROLEVEL_PUBLISH_INTERVAL_MS` | Heartbeat interval (0 = off) |
+| `HYDROLEVEL_OTA_URL` | Optional HTTP(S) URL for startup OTA firmware update |
+| `HYDROLEVEL_OTA_AUTO_APPLY` | `true` enables startup OTA apply from `HYDROLEVEL_OTA_URL` |
 
 ### MQTT broker URI schemes
 
@@ -110,6 +112,35 @@ set to) with a `binary_sensor` entity named **"Liquid Level"**.
 
 The device registers an availability topic so HA correctly shows the sensor as
 "Unavailable" if the ESP32 goes offline unexpectedly.
+
+## OTA updates
+
+This project now includes:
+
+- OTA-capable partition table (`ota_0` / `ota_1` + `otadata`)
+- Optional startup OTA flow controlled by `HYDROLEVEL_OTA_URL`
+- GitHub Actions release image generation (`hydrolevel-<tag>-ota.bin`)
+
+When `HYDROLEVEL_OTA_AUTO_APPLY=true` and `HYDROLEVEL_OTA_URL` is set,
+firmware will fetch the image at startup, write it to the next OTA slot, and
+reboot into the new slot.
+
+## GitHub Actions
+
+`.github/workflows/ci-release.yml` provides:
+
+- Rust CI on pull requests and branch pushes (format check, build, test compile)
+- Release firmware image build on tags like `v0.5.0`
+- Rust dependency caching via `Swatinem/rust-cache`
+
+### Secrets used by CI/release
+
+The workflow reads repository secrets matching the `HYDROLEVEL_*` names in
+`.env.example` (for example `HYDROLEVEL_WIFI_SSID`,
+`HYDROLEVEL_MQTT_BROKER_URI`, `HYDROLEVEL_HA_DEVICE_ID`, etc.).
+
+For release-tag builds, required secrets must be configured; CI builds use safe
+fallback defaults when secrets are not present.
 
 ## Extending for additional sensors
 

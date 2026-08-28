@@ -1,0 +1,31 @@
+name: Run Rust Tests
+
+on:
+  push: 
+    branches:
+      - main
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  rust-test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: cargo-bins/cargo-binstall@main
+        
+      - name: Install espup and esp32 toolchain
+        run: |
+          cargo binstall espup
+          espup install 
+
+      # - name: Install espflash
+      #   run: cargo binstall espflash
+      
+      - name: Run Test
+        run: cargo test --workspace

@@ -20,6 +20,7 @@ pub struct Config {
     pub sensor: SensorConfig,
     pub publish: PublishConfig,
     pub ha: HaConfig,
+    pub ota: OtaConfig,
 }
 
 pub struct WifiConfig {
@@ -86,19 +87,28 @@ pub struct HaConfig {
     pub availability_topic: &'static str,
 }
 
+/// OTA update behavior.
+pub struct OtaConfig {
+    /// Optional URL to an OTA app binary.
+    pub firmware_url: Option<&'static str>,
+    /// Enables automatic OTA apply on boot when a URL is configured.
+    pub auto_apply_on_boot: bool,
+}
+
 impl Config {
     /// Construct the firmware configuration from compile-time environment
     /// variables.  Panics at compile time if required variables are missing.
     pub fn load() -> Self {
-        let tls = if MQTT_CA_CERT.is_some() || MQTT_CLIENT_CERT.is_some() || MQTT_CLIENT_KEY.is_some() {
-            Some(TlsConfig {
-                ca_cert: MQTT_CA_CERT,
-                client_cert: MQTT_CLIENT_CERT,
-                client_key: MQTT_CLIENT_KEY,
-            })
-        } else {
-            None
-        };
+        let tls =
+            if MQTT_CA_CERT.is_some() || MQTT_CLIENT_CERT.is_some() || MQTT_CLIENT_KEY.is_some() {
+                Some(TlsConfig {
+                    ca_cert: MQTT_CA_CERT,
+                    client_cert: MQTT_CLIENT_CERT,
+                    client_key: MQTT_CLIENT_KEY,
+                })
+            } else {
+                None
+            };
 
         Config {
             wifi: WifiConfig {
@@ -127,6 +137,12 @@ impl Config {
                 state_topic: env!("HYDROLEVEL_MQTT_STATE_TOPIC"),
                 availability_topic: env!("HYDROLEVEL_MQTT_AVAILABILITY_TOPIC"),
             },
+            ota: OtaConfig {
+                firmware_url: option_env!("HYDROLEVEL_OTA_URL").and_then(non_empty),
+                auto_apply_on_boot: option_env!("HYDROLEVEL_OTA_AUTO_APPLY")
+                    .map(parse_bool)
+                    .unwrap_or(false),
+            },
         }
     }
 }
@@ -139,7 +155,10 @@ const fn parse_u32(s: &str) -> u32 {
     let mut i = 0;
     while i < bytes.len() {
         let b = bytes[i];
-        assert!(b >= b'0' && b <= b'9', "HYDROLEVEL_* numeric var must be a non-negative integer");
+        assert!(
+            b >= b'0' && b <= b'9',
+            "HYDROLEVEL_* numeric var must be a non-negative integer"
+        );
         result = result * 10 + (b - b'0') as u32;
         i += 1;
     }
@@ -152,7 +171,10 @@ const fn parse_u64(s: &str) -> u64 {
     let mut i = 0;
     while i < bytes.len() {
         let b = bytes[i];
-        assert!(b >= b'0' && b <= b'9', "HYDROLEVEL_* numeric var must be a non-negative integer");
+        assert!(
+            b >= b'0' && b <= b'9',
+            "HYDROLEVEL_* numeric var must be a non-negative integer"
+        );
         result = result * 10 + (b - b'0') as u64;
         i += 1;
     }
@@ -171,4 +193,12 @@ const fn parse_bool(s: &str) -> bool {
             ),
             (Some(b't'), Some(b'r'), Some(b'u'), Some(b'e'))
         )
+}
+
+fn non_empty(value: &'static str) -> Option<&'static str> {
+    if value.is_empty() {
+        None
+    } else {
+        Some(value)
+    }
 }

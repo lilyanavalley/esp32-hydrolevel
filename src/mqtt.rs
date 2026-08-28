@@ -72,8 +72,16 @@ impl MqttManager {
         // ── Build MQTT client configuration ──────────────────────────────────
         let mut mqtt_cfg = MqttClientConfiguration {
             client_id: Some(mc.client_id),
-            username: if mc.username.is_empty() { None } else { Some(mc.username) },
-            password: if mc.password.is_empty() { None } else { Some(mc.password) },
+            username: if mc.username.is_empty() {
+                None
+            } else {
+                Some(mc.username)
+            },
+            password: if mc.password.is_empty() {
+                None
+            } else {
+                Some(mc.password)
+            },
             // Last-will testament: publish "offline" to availability topic on
             // ungraceful disconnect so HA marks the device unavailable.
             lwt: Some(LwtConfiguration {
@@ -159,7 +167,8 @@ impl MqttManager {
     /// Announce that the device is online (retained availability message).
     pub fn publish_online(&mut self) -> Result<()> {
         let topic = self.availability_topic.clone();
-        self.client.enqueue(&topic, QoS::AtLeastOnce, true, b"online")?;
+        self.client
+            .enqueue(&topic, QoS::AtLeastOnce, true, b"online")?;
         Ok(())
     }
 
@@ -168,7 +177,8 @@ impl MqttManager {
         let topic = self.state_topic.clone();
         let payload = state.as_ha_state().as_bytes();
         info!("Publishing state '{}' → {}", state.as_ha_state(), topic);
-        self.client.enqueue(&topic, QoS::AtLeastOnce, false, payload)?;
+        self.client
+            .enqueue(&topic, QoS::AtLeastOnce, false, payload)?;
         Ok(())
     }
 }
@@ -181,15 +191,14 @@ impl MqttManager {
 /// (server_certificate, client_certificate, private_key) that must live
 /// at least as long as the configuration struct.  Since the certificate bytes
 /// come from `&'static [u8]` slices embedded in the binary, this is safe.
-fn apply_tls_config(
-    cfg: &mut MqttClientConfiguration<'_>,
-    tls: &TlsConfig,
-) -> Result<()> {
+fn apply_tls_config(cfg: &mut MqttClientConfiguration<'_>, tls: &TlsConfig) -> Result<()> {
     if let Some(ca) = tls.ca_cert {
         // esp-idf-svc expects a null-terminated PEM or a DER blob.
         // We store the raw bytes embedded by build.rs.
-        cfg.server_certificate = Some(esp_idf_svc::tls::X509::pem_until_nul(ca)
-            .map_err(|e| anyhow::anyhow!("Invalid CA certificate: {:?}", e))?);
+        cfg.server_certificate = Some(
+            esp_idf_svc::tls::X509::pem_until_nul(ca)
+                .map_err(|e| anyhow::anyhow!("Invalid CA certificate: {:?}", e))?,
+        );
     }
 
     match (tls.client_cert, tls.client_key) {
