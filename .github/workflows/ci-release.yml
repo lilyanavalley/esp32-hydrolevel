@@ -1,10 +1,8 @@
-name: CI + Release Firmware
+name: Release Firmware
 
 on:
   pull_request:
   push:
-    branches:
-      - main
     tags:
       - "v*"
 
@@ -17,20 +15,24 @@ permissions:
   contents: read
 
 jobs:
+  rust-test:
+    uses: ./.github/workflows/test-rust.yml
+
   rust-ci:
     name: Rust CI
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.ref_type == 'branch'
+    # if: github.event_name == 'pull_request'
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-          targets: riscv32imc-esp-espidf
+      - uses: cargo-bins/cargo-binstall@main
+        
+      - name: Install espup and esp32 toolchain
+        run: |
+          cargo binstall espup
+          espup install 
 
       - name: Restore Rust dependency cache
         uses: Swatinem/rust-cache@v2
@@ -217,7 +219,7 @@ jobs:
 
       - name: Attach firmware to GitHub release
         # Pinned softprops/action-gh-release v2 commit SHA.
-        uses: softprops/action-gh-release@da356a369686f885e31afc94fd4d8dc91c7a64a
+        uses: softprops/action-gh-release
         with:
           files: |
             target/${{ env.RUST_TARGET }}/release/hydrolevel
