@@ -219,7 +219,7 @@ jobs:
 
       - name: Attach firmware to GitHub release
         # Pinned softprops/action-gh-release v2 commit SHA.
-        uses: softprops/action-gh-release
+        uses: softprops/action-gh-release@v3.0.2
         with:
           files: |
             target/${{ env.RUST_TARGET }}/release/hydrolevel
