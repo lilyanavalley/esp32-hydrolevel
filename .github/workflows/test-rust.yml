@@ -34,4 +34,4 @@ jobs:
           cargo install --locked ldproxy
       
       - name: Run Test
-        run: cargo test --workspace --target $RUST_TARGET --no-run
+        run: cargo test --workspace --target ${{ env.RUST_TARGET }} --no-run
