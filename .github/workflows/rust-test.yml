@@ -1,0 +1,26 @@
+name: Test Rust
+
+on:
+  push:
+    branches:
+      - live
+      - canary
+  pull_request:
+  workflow_call:
+
+jobs:
+
+  test_rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: cargo-bins/cargo-binstall@main
+
+      - name: Install espup and esp32 toolchain
+        run: |
+          cargo binstall espup
+          espup install 
+
+      - name: Run Test
+        run: cargo test --workspace
