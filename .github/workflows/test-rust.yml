@@ -33,5 +33,5 @@ jobs:
           sudo apt-get install -y pkg-config libssl-dev
           cargo install --locked ldproxy
       
-      - name: Compile Tests
+      - name: Build Tests
         run: cargo build --tests --workspace --target ${{ env.RUST_TARGET }}
