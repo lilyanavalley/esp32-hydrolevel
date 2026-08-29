@@ -25,7 +25,7 @@ jobs:
       - name: Install espup and esp32 toolchain
         run: |
           cargo binstall espup
-          espup install 
+          espup install
 
       - name: Install build prerequisites
         run: |
